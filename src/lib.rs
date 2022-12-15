@@ -1,11 +1,12 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::store::lookup_map::Entry;
 use near_sdk::store::LookupMap;
 use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault};
 
 type Isbn = String;
 
-#[derive(BorshDeserialize, BorshSerialize)]
+#[derive(Clone, Serialize, Deserialize, BorshDeserialize, BorshSerialize)]
 pub struct Book {
     title: String,
     author: String,
@@ -54,5 +55,10 @@ impl BookDatabase {
                 msg
             }
         }
+    }
+
+    /// get a book based on the isbn
+    pub fn get(&self, isbn: String) -> Option<Book> {
+        self.books.get(&isbn).cloned()
     }
 }

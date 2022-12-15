@@ -10,6 +10,7 @@ crate-type = ["cdylib"]
 
 [dependencies]
 near-sdk = "4.1"
+serde = "1"
 
 [profile.release]
 codegen-units = 1
