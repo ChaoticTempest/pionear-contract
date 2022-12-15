@@ -1,52 +1,57 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::store::lookup_map::Entry;
-use near_sdk::store::{LookupMap, Vector};
-use near_sdk::{env, near_bindgen, AccountId};
+use near_sdk::store::LookupMap;
+use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault};
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
-pub struct BookTracker {
-    books: LookupMap<AccountId, Vector<Book>>,
-}
+type Isbn = String;
 
-#[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Book {
     title: String,
     author: String,
     desc: String,
-}
-
-impl Default for BookTracker {
-    fn default() -> Self {
-        Self {
-            books: LookupMap::new(b"b"),
-        }
-    }
+    user_submitted_id: AccountId,
 }
 
 #[near_bindgen]
-impl BookTracker {
-    // adds a new book to the tracker
-    pub fn add_book(&mut self, title: String, author: String, desc: String) {
-        let id = env::predecessor_account_id();
-        let new_book = Book {
-            title,
-            author,
-            desc,
-        };
+#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
+pub struct BookDatabase {
+    books: LookupMap<Isbn, Book>,
+    manager: AccountId,
+}
 
-        match self.books.entry(id) {
-            Entry::Occupied(mut entry) => {
-                entry.get_mut().push(new_book);
+#[near_bindgen]
+impl BookDatabase {
+    #[init]
+    pub fn new() -> Self {
+        Self {
+            books: LookupMap::new(b"b"),
+            manager: env::predecessor_account_id(),
+        }
+    }
+
+    // adds a new book to the tracker
+    pub fn add_book(
+        &mut self,
+        isbn: String,
+        title: String,
+        author: String,
+        desc: String,
+    ) -> String {
+        match self.books.entry(isbn) {
+            Entry::Occupied(entry) => {
+                format!("Book for isbn={} already exists", entry.key())
             }
             Entry::Vacant(entry) => {
-                entry.insert({
-                    let prefix = env::predecessor_account_id().to_string();
-                    let mut vec = Vector::new(prefix.as_bytes());
-                    vec.push(new_book);
-                    vec
+                let msg = format!("Successfully added book with isbn={}", entry.key());
+                entry.insert(Book {
+                    title,
+                    author,
+                    desc,
+                    user_submitted_id: env::predecessor_account_id(),
                 });
+
+                msg
             }
         }
     }
